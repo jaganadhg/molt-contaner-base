@@ -1,15 +1,16 @@
-# OpenClaw + Ollama (Phi) — Podman Compose setup
-# Runs Ollama locally with the Phi model as the LLM backend for OpenClaw.
+# OpenClaw + Ollama + QMD Memory — Podman Compose setup
+# Runs Ollama locally with a small LLM as the backend for OpenClaw,
+# plus QMD (https://github.com/tobi/qmd) as the memory search layer.
 # No cloud API keys needed — fully local and private.
 #
 # Usage:
 #   1. Copy .env.ollama.example to .env and fill in your values
-#   2. ./setup-ollama.sh          (or manually: podman compose -f podman-compose-ollama.yml up -d)
+#   2. ./setup-ollama.sh          (first run builds the custom image)
 #   3. Open http://localhost:18789/#token=<your-token>
 #
 # Requirements:
 #   - podman + podman-compose
-#   - ~4 GB disk for the Phi model
+#   - ~4 GB disk for the LLM model + QMD index
 
 services:
   # ── Ollama LLM server ────────────────────────────────────────────────────
@@ -26,9 +27,9 @@ services:
     restart: unless-stopped
     # Ollama listens on 0.0.0.0:11434 by default inside the container
 
-  # ── OpenClaw Gateway (uses Ollama as LLM) ────────────────────────────────
+  # ── OpenClaw Gateway (uses Ollama as LLM + QMD for memory) ───────────────
   openclaw-gateway:
-    image: ghcr.io/openclaw/openclaw:latest
+    image: localhost/openclaw-qmd:latest
     container_name: openclaw-gateway
     depends_on:
       - ollama
@@ -65,7 +66,7 @@ services:
 
   # ── OpenClaw CLI (on-demand) ─────────────────────────────────────────────
   openclaw-cli:
-    image: ghcr.io/openclaw/openclaw:latest
+    image: localhost/openclaw-qmd:latest
     container_name: openclaw-cli
     depends_on:
       - ollama

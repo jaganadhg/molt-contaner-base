@@ -1,0 +1,29 @@
+# Custom OpenClaw image with QMD (https://github.com/tobi/qmd) pre-installed.
+# QMD = "Query Markup Documents" – an on-device search engine for markdown files.
+# OpenClaw uses it as a memory backend (memory.backend: "qmd").
+#
+# Build: podman build -t openclaw-qmd:latest -f Dockerfile.qmd .
+FROM ghcr.io/openclaw/openclaw:latest
+
+USER root
+
+# Install deps needed by Bun installer and node-llama-cpp native modules
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl unzip ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Bun for the node user
+USER node
+ENV BUN_INSTALL="/home/node/.bun"
+RUN curl -fsSL https://bun.sh/install | bash
+
+# Put bun (and globally installed bins like qmd) on PATH
+ENV PATH="/home/node/.bun/bin:${PATH}"
+
+# Install QMD globally via Bun
+RUN bun install -g github:tobi/qmd
+
+# Verify qmd is available
+RUN qmd --help > /dev/null 2>&1 || echo "WARNING: qmd --help failed (may still work at runtime)"
+
+USER node

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# setup-ollama.sh — Bootstrap OpenClaw + Ollama (Phi) on Podman Compose
-# Pulls Ollama + OpenClaw images, downloads the Phi model, and starts everything.
+# setup-ollama.sh — Bootstrap OpenClaw + Ollama + QMD Memory on Podman Compose
+# Builds a custom image with QMD, pulls models, and starts everything.
 set -euo pipefail
 
 COMPOSE_FILE="podman-compose-ollama.yml"
@@ -54,7 +54,11 @@ WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-./data/workspace}"
 mkdir -p "$CONFIG_DIR" "$WORKSPACE_DIR"
 chmod 777 "$CONFIG_DIR" "$WORKSPACE_DIR"
 
-# ── Seed OpenClaw config for Ollama + Phi ─────────────────────────────────────
+# Create workspace memory directories for QMD
+mkdir -p "$WORKSPACE_DIR/memory"
+chmod 777 "$WORKSPACE_DIR/memory"
+
+# ── Seed OpenClaw config for Ollama + QMD memory ─────────────────────────────
 OPENCLAW_JSON="$CONFIG_DIR/openclaw.json"
 if [[ ! -f "$OPENCLAW_JSON" ]]; then
   cat > "$OPENCLAW_JSON" <<JSONEOF
@@ -93,13 +97,29 @@ if [[ ! -f "$OPENCLAW_JSON" ]]; then
       }
     }
   },
+  "memory": {
+    "backend": "qmd",
+    "citations": "auto",
+    "qmd": {
+      "includeDefaultMemory": true,
+      "searchMode": "search",
+      "sessions": {
+        "enabled": true
+      },
+      "update": {
+        "onBoot": true,
+        "waitForBootSync": false,
+        "interval": "5m"
+      }
+    }
+  },
   "meta": {
     "lastTouchedVersion": "2026.2.13",
     "lastTouchedAt": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
   }
 }
 JSONEOF
-  echo "Created $OPENCLAW_JSON (model: ollama/${OLLAMA_MODEL})."
+  echo "Created $OPENCLAW_JSON (model: ollama/${OLLAMA_MODEL}, memory: qmd)."
 fi
 
 # ── Pull images ──────────────────────────────────────────────────────────────
@@ -107,6 +127,13 @@ echo ""
 echo "Pulling container images ..."
 podman pull docker.io/ollama/ollama:latest
 podman pull ghcr.io/openclaw/openclaw:latest
+
+# ── Build custom OpenClaw+QMD image ──────────────────────────────────────────
+echo ""
+echo "Building openclaw-qmd image (installs Bun + QMD in the container)..."
+echo "This may take a few minutes on first run."
+podman build -t openclaw-qmd:latest -f Dockerfile.qmd . 2>&1
+echo "openclaw-qmd image built."
 
 # ── Start Ollama first ───────────────────────────────────────────────────────
 echo ""
@@ -142,19 +169,25 @@ TOKEN="$(grep '^OPENCLAW_GATEWAY_TOKEN=' .env | cut -d= -f2)"
 
 echo ""
 echo "=============================================="
-echo " OpenClaw + Ollama (${OLLAMA_MODEL}) is running!"
+echo " OpenClaw + Ollama (${OLLAMA_MODEL}) + QMD is running!"
 echo "=============================================="
 echo ""
 echo " Gateway:   http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}"
 echo " Dashboard: http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}/#token=${TOKEN}"
 echo " Ollama:    http://localhost:${OLLAMA_HOST_PORT:-11434}"
 echo " Model:     ollama/${OLLAMA_MODEL}"
+echo " Memory:    QMD (BM25 search mode)"
 echo " Config:    ${CONFIG_DIR}"
 echo " Workspace: ${WORKSPACE_DIR}"
+echo ""
+echo " QMD Memory:"
+echo "   Place .md files in ${WORKSPACE_DIR}/memory/ for persistent memory."
+echo "   Or create ${WORKSPACE_DIR}/MEMORY.md for quick notes."
+echo "   QMD indexes these automatically every 5 minutes."
 echo ""
 echo " Useful commands:"
 echo "   podman compose -f ${COMPOSE_FILE} logs -f"
 echo "   podman compose -f ${COMPOSE_FILE} down"
 echo "   podman exec ollama ollama list"
-echo "   podman exec ollama ollama run ${OLLAMA_MODEL}"
+echo "   podman exec openclaw-gateway qmd status"
 echo ""
