@@ -97,6 +97,13 @@ if [[ ! -f "$OPENCLAW_JSON" ]]; then
       }
     }
   },
+  "plugins": {
+    "entries": {
+      "whatsapp": {
+        "enabled": true
+      }
+    }
+  },
   "memory": {
     "backend": "qmd",
     "citations": "auto",
@@ -177,8 +184,15 @@ echo " Dashboard: http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}/#token=${TOKE
 echo " Ollama:    http://localhost:${OLLAMA_HOST_PORT:-11434}"
 echo " Model:     ollama/${OLLAMA_MODEL}"
 echo " Memory:    QMD (BM25 search mode)"
+echo " WhatsApp:  Enabled (link via dashboard QR code)"
 echo " Config:    ${CONFIG_DIR}"
 echo " Workspace: ${WORKSPACE_DIR}"
+echo ""
+echo " WhatsApp Setup:"
+echo "   1. Open the Dashboard URL above"
+echo "   2. Go to Channels → WhatsApp → Login"
+echo "   3. Scan the QR code with WhatsApp on your phone"
+echo "      (Settings → Linked Devices → Link a Device)"
 echo ""
 echo " QMD Memory:"
 echo "   Place .md files in ${WORKSPACE_DIR}/memory/ for persistent memory."
