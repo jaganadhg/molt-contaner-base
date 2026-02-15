@@ -58,6 +58,14 @@ chmod 777 "$CONFIG_DIR" "$WORKSPACE_DIR"
 mkdir -p "$WORKSPACE_DIR/memory"
 chmod 777 "$WORKSPACE_DIR/memory"
 
+# Deploy custom skills to workspace
+if [[ -d "skills" ]]; then
+  echo "Deploying custom skills to workspace ..."
+  mkdir -p "$WORKSPACE_DIR/skills"
+  cp -r skills/* "$WORKSPACE_DIR/skills/"
+  chmod -R 777 "$WORKSPACE_DIR/skills"
+fi
+
 # ── Seed OpenClaw config for Ollama + QMD memory ─────────────────────────────
 OPENCLAW_JSON="$CONFIG_DIR/openclaw.json"
 if [[ ! -f "$OPENCLAW_JSON" ]]; then
