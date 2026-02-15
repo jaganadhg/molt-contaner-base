@@ -1,0 +1,87 @@
+# OpenClaw + Ollama (Phi) — Podman Compose setup
+# Runs Ollama locally with the Phi model as the LLM backend for OpenClaw.
+# No cloud API keys needed — fully local and private.
+#
+# Usage:
+#   1. Copy .env.ollama.example to .env and fill in your values
+#   2. ./setup-ollama.sh          (or manually: podman compose -f podman-compose-ollama.yml up -d)
+#   3. Open http://localhost:18789/#token=<your-token>
+#
+# Requirements:
+#   - podman + podman-compose
+#   - ~4 GB disk for the Phi model
+
+services:
+  # ── Ollama LLM server ────────────────────────────────────────────────────
+  ollama:
+    image: docker.io/ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      - "${OLLAMA_HOST_PORT:-11434}:11434"
+    restart: unless-stopped
+    # Ollama listens on 0.0.0.0:11434 by default inside the container
+
+  # ── OpenClaw Gateway (uses Ollama as LLM) ────────────────────────────────
+  openclaw-gateway:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: openclaw-gateway
+    depends_on:
+      - ollama
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      # Point OpenClaw to the Ollama server on the compose network
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
+      # Channel tokens (optional — set the ones you use)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
+    ports:
+      - "${OPENCLAW_GATEWAY_PORT}:18789"
+      - "${OPENCLAW_BRIDGE_PORT}:18790"
+    init: true
+    restart: unless-stopped
+    command:
+      [
+        "node",
+        "dist/index.js",
+        "gateway",
+        "--bind",
+        "${OPENCLAW_GATEWAY_BIND}",
+        "--port",
+        "18789",
+      ]
+
+  # ── OpenClaw CLI (on-demand) ─────────────────────────────────────────────
+  openclaw-cli:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: openclaw-cli
+    depends_on:
+      - ollama
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      BROWSER: "echo"
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
+    stdin_open: true
+    tty: true
+    init: true
+    entrypoint: ["node", "dist/index.js"]
+    profiles:
+      - cli
+
+volumes:
+  ollama-models:
