@@ -1,0 +1,5 @@
+# Runtime data (config, workspace, credentials)
+data/
+
+# Environment file with secrets
+.env
