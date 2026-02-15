@@ -85,6 +85,14 @@ if [[ ! -f "$OPENCLAW_JSON" ]]; then
       "dangerouslyDisableDeviceAuth": true
     }
   },
+  "models": {
+    "providers": {
+      "ollama": {
+        "baseUrl": "http://ollama:11434",
+        "models": []
+      }
+    }
+  },
   "meta": {
     "lastTouchedVersion": "2026.2.13",
     "lastTouchedAt": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"

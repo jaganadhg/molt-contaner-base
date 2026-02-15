@@ -16,6 +16,9 @@ services:
   ollama:
     image: docker.io/ollama/ollama:latest
     container_name: ollama
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - ollama-models:/root/.ollama
     ports:
