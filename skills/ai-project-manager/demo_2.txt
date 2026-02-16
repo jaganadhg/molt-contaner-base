@@ -1,0 +1,85 @@
+AI Project Manager — Demo #2 (Incident response & hotfix workflow)
+
+Purpose
+- Walk through a security incident triage → hotfix → CI/CD → audit workflow using
+  the AI Project Manager skill and Kanban board.
+
+Storyline (short)
+- A critical auth bypass is reported in production. The Planner creates an incident
+  task and summons Security and DevOps. The Coder implements a hotfix, Tester
+  verifies, Security runs a focused scan, and DevOps deploys to staging. The
+  pipeline records logs and the audit trail captures every action.
+
+Quick checklist (what this demo demonstrates)
+- Creating an incident project & urgent task
+- Spawning/summoning agent sessions (planner, security, coder, tester, devops)
+- Inter-agent messaging and @mentions
+- Running pipeline stages including `security_scan` and `staging`
+- Viewing audit trail and pipeline logs
+
+Commands — run sequentially
+
+1) Ensure environment & Kanban server
+- podman compose -f podman-compose-ollama.yml up -d openclaw-gateway
+- open http://localhost:8420 in your browser
+
+2) Create or confirm the active project
+- python3 skills/ai-project-manager/scripts/orchestrator.py init --name "Prod Incident" --description "Auth bypass in payments"
+
+3) Spawn the incident response team (CLI or UI)
+- CLI (inside workspace):
+  python3 skills/ai-project-manager/scripts/orchestrator.py agent spawn --role planner
+  python3 skills/ai-project-manager/scripts/orchestrator.py agent spawn --role security
+  python3 skills/ai-project-manager/scripts/orchestrator.py agent spawn --role coder
+  python3 skills/ai-project-manager/scripts/orchestrator.py agent spawn --role tester
+  python3 skills/ai-project-manager/scripts/orchestrator.py agent spawn --role devops
+
+- UI: Agents panel → click "Spawn team"
+
+4) Create the incident (task)
+- python3 skills/ai-project-manager/scripts/orchestrator.py task create --title "Hotfix: Auth bypass in payments" --description "Reject malformed JWT leading to bypass" --priority critical
+
+5) Planner notifies Security and assigns the task
+- python3 skills/ai-project-manager/scripts/orchestrator.py task assign --id 1 --role planner
+- python3 skills/ai-project-manager/scripts/orchestrator.py message --from planner --to security --content "Urgent: perform triage for task #1" --task-id 1
+
+6) Security triages and requests a hotfix (summon coder)
+- python3 skills/ai-project-manager/scripts/orchestrator.py message --from security --to coder --content "Findings: missing JWT validation — please hotfix and open PR" --task-id 1
+- python3 skills/ai-project-manager/scripts/orchestrator.py agent spawn --role coder --task-id 1
+
+7) Coder implements fix & pushes artifact (simulate)
+- python3 skills/ai-project-manager/scripts/orchestrator.py task move --id 1 --status in_progress
+- (Optionally add an artifact via CLI or tests to simulate PR)
+
+8) Run CI/CD: build → test → security_scan → staging
+- python3 skills/ai-project-manager/scripts/orchestrator.py pipeline run --stage build --task-id 1
+- python3 skills/ai-project-manager/scripts/orchestrator.py pipeline run --stage test --task-id 1
+- python3 skills/ai-project-manager/scripts/orchestrator.py pipeline run --stage security_scan --task-id 1
+- python3 skills/ai-project-manager/scripts/orchestrator.py pipeline run --stage staging --task-id 1
+
+9) Tester verifies and moves task to review/done
+- python3 skills/ai-project-manager/scripts/orchestrator.py task move --id 1 --status review
+- python3 skills/ai-project-manager/scripts/orchestrator.py message --from tester --to reviewer --content "Ready for review: tests passed" --task-id 1
+- After approval: python3 skills/ai-project-manager/scripts/orchestrator.py task move --id 1 --status done
+
+10) Inspect audit trail and logs
+- curl -sS http://localhost:8420/api/audit?task_id=1 | jq .
+- sqlite3 data/workspace/skills/ai-project-manager/data/project_manager.db "SELECT * FROM audit_log WHERE task_id=1 ORDER BY created_at;"
+
+11) UI walkthrough
+- Open Kanban board: http://localhost:8420
+- Confirm task #1 appears in Backlog → In Progress → Review → Done
+- Open Agents panel to see active sessions and messages panel for the conversation
+- Pipeline bar shows stage statuses; click to inspect pipeline history in API
+
+Cleanup (optional)
+- Terminate agent sessions:
+  python3 skills/ai-project-manager/scripts/orchestrator.py agent terminate --session-id <session_id>
+- Remove demo tasks:
+  python3 skills/ai-project-manager/scripts/orchestrator.py task delete --id 1
+
+Notes
+- Use the UI spawn buttons or CLI orchestrator — both call the same API.
+- The `security_scan` stage combines pattern checks + optional bandit run (if available).
+
+End of Demo #2 — Incident response & hotfix workflow
