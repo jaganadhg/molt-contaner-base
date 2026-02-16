@@ -340,6 +340,24 @@ def run_server(port: int = 8420, host: str = "0.0.0.0"):
     APIHandler.db = db
     APIHandler.project_id = project.id
 
+    # Auto-spawn common team sessions if they don't already exist
+    try:
+        from agent_manager import AgentManager
+        am = AgentManager(db, project.id)
+        default_team = ["planner", "coder", "tester", "reviewer", "security"]
+        spawned = []
+        for role in default_team:
+            if not db.find_active_session_for_role(project.id, role):
+                try:
+                    s = am.spawn_agent(role=role)
+                    spawned.append(s.id)
+                except Exception as e:
+                    sys.stderr.write(f"[AIPM] Failed to spawn default role '{role}': {e}\n")
+        if spawned:
+            print(f"✅ Auto-spawned default team sessions: {', '.join(spawned)}")
+    except Exception as e:
+        sys.stderr.write(f"[AIPM] Auto-spawn skipped/error: {e}\n")
+
     server = HTTPServer((host, port), APIHandler)
 
     print(f"🧠 AI Project Manager — Kanban Board")

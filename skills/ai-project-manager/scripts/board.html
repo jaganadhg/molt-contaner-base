@@ -504,6 +504,7 @@
     <div class="panel-toggle">
         <button class="panel-btn" onclick="togglePanel('agents')">🤖 Agents</button>
         <button class="panel-btn" onclick="togglePanel('messages')">📬 Messages</button>
+        <button class="panel-btn" onclick="spawnTeam()">🧩 Spawn team</button>
     </div>
 
     <!-- Overlay -->
@@ -652,7 +653,18 @@
         function renderAgents(agents) {
             const list = document.getElementById('agents-list');
             if (!agents || agents.length === 0) {
-                list.innerHTML = '<div class="empty-state">No active agents</div>';
+                // Show quick actions to spawn the standard team or individual roles
+                list.innerHTML = `
+                    <div class="empty-state">No active agents</div>
+                    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="panel-btn" onclick="spawnTeam()">🧩 Spawn team</button>
+                        <button class="panel-btn" onclick="spawnRole('planner')">📋 planner</button>
+                        <button class="panel-btn" onclick="spawnRole('coder')">💻 coder</button>
+                        <button class="panel-btn" onclick="spawnRole('tester')">🧪 tester</button>
+                        <button class="panel-btn" onclick="spawnRole('reviewer')">👀 reviewer</button>
+                        <button class="panel-btn" onclick="spawnRole('security')">🔒 security</button>
+                    </div>
+                `;
                 return;
             }
 
@@ -871,6 +883,23 @@
             if (agentsData) renderAgents(agentsData.agents || agentsData);
             if (messagesData) renderMessages(messagesData.messages || messagesData);
             if (pipelineData) renderPipeline(pipelineData);
+        }
+
+        // ── Spawn helpers (UI) ───────────────────────────
+        async function spawnRole(role) {
+            const res = await apiPost('/agent/spawn', { role });
+            if (res && res.status === 'success') {
+                await refreshBoard();
+            } else {
+                alert((res && res.error) || 'Failed to spawn agent');
+            }
+        }
+
+        async function spawnTeam() {
+            const roles = ['planner','coder','tester','reviewer','security'];
+            for (const r of roles) {
+                await spawnRole(r);
+            }
         }
 
         // ── Utility ───────────────────────────────────────
