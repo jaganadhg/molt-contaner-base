@@ -1,45 +1,31 @@
-# OpenClaw + Ollama + QMD Memory — Podman Compose setup
-# Runs Ollama locally with a small LLM as the backend for OpenClaw,
-# plus QMD (https://github.com/tobi/qmd) as the memory search layer.
-# No cloud API keys needed — fully local and private.
+# OpenClaw + QMD Memory — Podman Compose setup
+# Uses cloud LLM providers (OpenAI, Anthropic, etc.) with QMD memory backend.
 #
 # Usage:
-#   1. Copy .env.ollama.example to .env and fill in your values
+#   1. Copy .env.ollama.example to .env and fill in your API keys
 #   2. ./setup-ollama.sh          (first run builds the custom image)
 #   3. Open http://localhost:18789/#token=<your-token>
 #
 # Requirements:
 #   - podman + podman-compose
-#   - ~4 GB disk for the LLM model + QMD index
 
 services:
-  # ── Ollama LLM server ────────────────────────────────────────────────────
-  ollama:
-    image: docker.io/ollama/ollama:latest
-    container_name: ollama
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
-    volumes:
-      - ollama-models:/root/.ollama
-    ports:
-      - "${OLLAMA_HOST_PORT}:11434"
-    restart: unless-stopped
-    # Ollama listens on 0.0.0.0:11434 by default inside the container
-
-  # ── OpenClaw Gateway (uses Ollama as LLM + QMD for memory) ───────────────
+  # ── OpenClaw Gateway (with QMD memory backend) ───────────────────────────
   openclaw-gateway:
     image: localhost/openclaw-qmd:latest
     container_name: openclaw-gateway
-    depends_on:
-      - ollama
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
       HOME: /home/node
       TERM: xterm-256color
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
-      # Point OpenClaw to the Ollama server on the compose network
-      OLLAMA_BASE_URL: http://ollama:11434
-      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
+      # Model provider keys (set at least one in .env)
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       # Channel tokens (optional — set the ones you use)
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
@@ -68,15 +54,15 @@ services:
   openclaw-cli:
     image: localhost/openclaw-qmd:latest
     container_name: openclaw-cli
-    depends_on:
-      - ollama
     environment:
       HOME: /home/node
       TERM: xterm-256color
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
       BROWSER: "echo"
-      OLLAMA_BASE_URL: http://ollama:11434
-      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
     volumes:
       - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
@@ -86,6 +72,3 @@ services:
     entrypoint: ["node", "dist/index.js"]
     profiles:
       - cli
-
-volumes:
-  ollama-models:

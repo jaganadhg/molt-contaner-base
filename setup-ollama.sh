@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# setup-ollama.sh — Bootstrap OpenClaw + Ollama + QMD Memory on Podman Compose
-# Builds a custom image with QMD, pulls models, and starts everything.
+# setup-ollama.sh — Bootstrap OpenClaw + QMD Memory on Podman Compose
+# Builds a custom image with QMD, deploys skills, and starts everything.
+# Uses cloud LLM providers (OpenAI, Anthropic, etc.) — set API keys in .env
 set -euo pipefail
 
 COMPOSE_FILE="podman-compose-ollama.yml"
@@ -46,7 +47,6 @@ set -a
 source .env 2>/dev/null || true
 set +a
 
-OLLAMA_MODEL="${OLLAMA_MODEL:-phi4}"
 CONFIG_DIR="${OPENCLAW_CONFIG_DIR:-./data/config}"
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-./data/workspace}"
 
@@ -66,13 +66,50 @@ if [[ -d "skills" ]]; then
   chmod -R 777 "$WORKSPACE_DIR/skills"
 fi
 
-# ── Seed OpenClaw config for Ollama + QMD memory ─────────────────────────────
+# Deploy AGENTS.md to workspace
+echo "Writing AGENTS.md to workspace ..."
+cat > "$WORKSPACE_DIR/AGENTS.md" << 'AGENTSEOF'
+# AGENTS.md - Workspace
+
+## Every Session
+1. Read SOUL.md - this is who you are
+2. Read USER.md - who you are helping
+3. Read memory/YYYY-MM-DD.md (today + yesterday) for context
+
+## Memory
+- Daily notes: memory/YYYY-MM-DD.md - raw logs
+- Long-term: MEMORY.md - curated memories
+Capture decisions, context, things to remember.
+
+## Tools
+Skills provide your tools. Check SKILL.md for each skill.
+Keep local notes in TOOLS.md.
+
+## CRITICAL: News & Topic Queries
+When asked about news, updates, latest information, or any topic queries:
+1. ALWAYS use the bash/exec tool to run the topic-news-search skill
+2. Command: python3 skills/topic-news-search/scripts/fetch_news.py "QUERY"
+3. NEVER use web_search or web_fetch for news queries
+4. NEVER try to scrape individual websites for news
+5. The skill fetches from Google News RSS and works for ALL topics
+
+## Platform Formatting
+- Discord/WhatsApp: No markdown tables, use bullet lists
+- WhatsApp: No headers, use bold or CAPS for emphasis
+
+## Heartbeats
+When you receive a heartbeat poll, check HEARTBEAT.md if it exists.
+If nothing needs attention, reply HEARTBEAT_OK.
+AGENTSEOF
+chmod 666 "$WORKSPACE_DIR/AGENTS.md"
+
+# ── Seed OpenClaw config ─────────────────────────────────────────────────────
 OPENCLAW_JSON="$CONFIG_DIR/openclaw.json"
 if [[ ! -f "$OPENCLAW_JSON" ]]; then
-  cat > "$OPENCLAW_JSON" <<JSONEOF
+  cat > "$OPENCLAW_JSON" <<'JSONEOF'
 {
   "wizard": {
-    "lastRunAt": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",
+    "lastRunAt": "2026-01-01T00:00:00.000Z",
     "lastRunVersion": "2026.2.13",
     "lastRunCommand": "doctor",
     "lastRunMode": "local"
@@ -80,13 +117,22 @@ if [[ ! -f "$OPENCLAW_JSON" ]]; then
   "agents": {
     "defaults": {
       "model": {
-        "primary": "ollama/${OLLAMA_MODEL}"
-      }
+        "primary": "openai/gpt-4o-mini"
+      },
+      "bootstrapMaxChars": 6000,
+      "maxConcurrent": 1
     }
   },
   "commands": {
     "native": "auto",
-    "nativeSkills": "auto"
+    "nativeSkills": "auto",
+    "bash": true
+  },
+  "tools": {
+    "web": {
+      "search": { "enabled": false },
+      "fetch": { "enabled": false }
+    }
   },
   "gateway": {
     "mode": "local",
@@ -99,9 +145,19 @@ if [[ ! -f "$OPENCLAW_JSON" ]]; then
   },
   "models": {
     "providers": {
-      "ollama": {
-        "baseUrl": "http://ollama:11434",
-        "models": []
+      "openai": {
+        "models": [
+          {
+            "id": "gpt-4o-mini",
+            "name": "GPT-4o Mini",
+            "contextWindow": 128000
+          },
+          {
+            "id": "gpt-4o",
+            "name": "GPT-4o",
+            "contextWindow": 128000
+          }
+        ]
       }
     }
   },
@@ -130,49 +186,23 @@ if [[ ! -f "$OPENCLAW_JSON" ]]; then
   },
   "meta": {
     "lastTouchedVersion": "2026.2.13",
-    "lastTouchedAt": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+    "lastTouchedAt": "2026-01-01T00:00:00.000Z"
   }
 }
 JSONEOF
-  echo "Created $OPENCLAW_JSON (model: ollama/${OLLAMA_MODEL}, memory: qmd)."
+  echo "Created $OPENCLAW_JSON (model: openai/gpt-4o-mini, memory: qmd)."
 fi
 
-# ── Pull images ──────────────────────────────────────────────────────────────
+# ── Pull image & build QMD layer ─────────────────────────────────────────────
 echo ""
-echo "Pulling container images ..."
-podman pull docker.io/ollama/ollama:latest
+echo "Pulling OpenClaw base image ..."
 podman pull ghcr.io/openclaw/openclaw:latest
 
-# ── Build custom OpenClaw+QMD image ──────────────────────────────────────────
 echo ""
 echo "Building openclaw-qmd image (installs Bun + QMD in the container)..."
 echo "This may take a few minutes on first run."
 podman build -t openclaw-qmd:latest -f Dockerfile.qmd . 2>&1
 echo "openclaw-qmd image built."
-
-# ── Start Ollama first ───────────────────────────────────────────────────────
-echo ""
-echo "Starting Ollama server ..."
-podman compose -f "$COMPOSE_FILE" up -d ollama
-
-# Wait for Ollama API to be ready
-echo "Waiting for Ollama API ..."
-for i in $(seq 1 30); do
-  if podman exec ollama curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
-    echo "Ollama API ready."
-    break
-  fi
-  if [[ $i -eq 30 ]]; then
-    echo "Warning: Ollama API did not respond in 30s. Model pull may fail."
-  fi
-  sleep 1
-done
-
-# ── Pull the Phi model ───────────────────────────────────────────────────────
-echo ""
-echo "Pulling model: ${OLLAMA_MODEL} (this may take a few minutes) ..."
-podman exec ollama ollama pull "${OLLAMA_MODEL}"
-echo "Model ${OLLAMA_MODEL} ready."
 
 # ── Start OpenClaw gateway ───────────────────────────────────────────────────
 echo ""
@@ -184,23 +214,21 @@ TOKEN="$(grep '^OPENCLAW_GATEWAY_TOKEN=' .env | cut -d= -f2)"
 
 echo ""
 echo "=============================================="
-echo " OpenClaw + Ollama (${OLLAMA_MODEL}) + QMD is running!"
+echo " OpenClaw + QMD Memory is running!"
 echo "=============================================="
 echo ""
 echo " Gateway:   http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}"
 echo " Dashboard: http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}/#token=${TOKEN}"
-echo " Ollama:    http://localhost:${OLLAMA_HOST_PORT:-11434}"
-echo " Model:     ollama/${OLLAMA_MODEL}"
+echo " Model:     openai/gpt-4o-mini (configure in dashboard)"
 echo " Memory:    QMD (BM25 search mode)"
 echo " WhatsApp:  Enabled (link via dashboard QR code)"
 echo " Config:    ${CONFIG_DIR}"
 echo " Workspace: ${WORKSPACE_DIR}"
 echo ""
-echo " WhatsApp Setup:"
-echo "   1. Open the Dashboard URL above"
-echo "   2. Go to Channels → WhatsApp → Login"
-echo "   3. Scan the QR code with WhatsApp on your phone"
-echo "      (Settings → Linked Devices → Link a Device)"
+echo " Setup:"
+echo "   1. Set your OPENAI_API_KEY in .env (or configure via dashboard)"
+echo "   2. Open the Dashboard URL above"
+echo "   3. For WhatsApp: go to Channels → WhatsApp → scan QR code"
 echo ""
 echo " QMD Memory:"
 echo "   Place .md files in ${WORKSPACE_DIR}/memory/ for persistent memory."
@@ -210,6 +238,5 @@ echo ""
 echo " Useful commands:"
 echo "   podman compose -f ${COMPOSE_FILE} logs -f"
 echo "   podman compose -f ${COMPOSE_FILE} down"
-echo "   podman exec ollama ollama list"
 echo "   podman exec openclaw-gateway qmd status"
 echo ""
