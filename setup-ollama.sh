@@ -52,18 +52,24 @@ WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-./data/workspace}"
 
 # ── Data directories ─────────────────────────────────────────────────────────
 mkdir -p "$CONFIG_DIR" "$WORKSPACE_DIR"
-chmod 777 "$CONFIG_DIR" "$WORKSPACE_DIR"
 
 # Create workspace memory directories for QMD
 mkdir -p "$WORKSPACE_DIR/memory"
-chmod 777 "$WORKSPACE_DIR/memory"
+
+# The container runs as uid 1000 (node), mapped to a sub-UID in rootless Podman.
+# Use 700 to restrict access; podman maps ownership automatically.
+CONTAINER_UID=$(podman run --rm ghcr.io/openclaw/openclaw:latest id -u 2>/dev/null || echo "")
+if [[ -n "$CONTAINER_UID" ]]; then
+  podman unshare chown -R "$CONTAINER_UID:$CONTAINER_UID" "$CONFIG_DIR" "$WORKSPACE_DIR"
+fi
+chmod 700 "$CONFIG_DIR" "$WORKSPACE_DIR" "$WORKSPACE_DIR/memory"
 
 # Deploy custom skills to workspace
 if [[ -d "skills" ]]; then
   echo "Deploying custom skills to workspace ..."
   mkdir -p "$WORKSPACE_DIR/skills"
   cp -r skills/* "$WORKSPACE_DIR/skills/"
-  chmod -R 777 "$WORKSPACE_DIR/skills"
+  chmod -R 755 "$WORKSPACE_DIR/skills"
 fi
 
 # Deploy AGENTS.md to workspace
@@ -101,7 +107,7 @@ When asked about news, updates, latest information, or any topic queries:
 When you receive a heartbeat poll, check HEARTBEAT.md if it exists.
 If nothing needs attention, reply HEARTBEAT_OK.
 AGENTSEOF
-chmod 666 "$WORKSPACE_DIR/AGENTS.md"
+chmod 644 "$WORKSPACE_DIR/AGENTS.md"
 
 # ── Seed OpenClaw config ─────────────────────────────────────────────────────
 OPENCLAW_JSON="$CONFIG_DIR/openclaw.json"
@@ -139,9 +145,7 @@ if [[ ! -f "$OPENCLAW_JSON" ]]; then
     "auth": {
       "mode": "token"
     },
-    "controlUi": {
-      "dangerouslyDisableDeviceAuth": true
-    }
+    "controlUi": {}
   },
   "models": {
     "providers": {
@@ -218,7 +222,8 @@ echo " OpenClaw + QMD Memory is running!"
 echo "=============================================="
 echo ""
 echo " Gateway:   http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}"
-echo " Dashboard: http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}/#token=${TOKEN}"
+echo " Dashboard: http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}/#token=${TOKEN:0:8}…"
+echo "            (full token in .env — do not share it)"
 echo " Model:     openai/gpt-4o-mini (configure in dashboard)"
 echo " Memory:    QMD (BM25 search mode)"
 echo " WhatsApp:  Enabled (link via dashboard QR code)"

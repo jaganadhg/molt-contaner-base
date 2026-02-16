@@ -12,16 +12,19 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl unzip ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Bun for the node user
+# Install Bun for the node user (pinned version for reproducibility)
 USER node
 ENV BUN_INSTALL="/home/node/.bun"
-RUN curl -fsSL https://bun.sh/install | bash
+ARG BUN_VERSION=1.1.43
+RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
 
 # Put bun (and globally installed bins like qmd) on PATH
 ENV PATH="/home/node/.bun/bin:${PATH}"
 
-# Install QMD globally via Bun
-RUN bun install -g github:tobi/qmd
+# Install QMD globally via Bun (pinned to a specific commit for supply-chain safety)
+# Update this commit hash when upgrading QMD.
+ARG QMD_COMMIT=main
+RUN bun install -g github:tobi/qmd#${QMD_COMMIT}
 
 # Verify qmd is available
 RUN qmd --help > /dev/null 2>&1 || echo "WARNING: qmd --help failed (may still work at runtime)"

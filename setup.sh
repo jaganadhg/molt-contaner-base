@@ -45,9 +45,13 @@ CONFIG_DIR="${OPENCLAW_CONFIG_DIR:-./data/config}"
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-./data/workspace}"
 
 mkdir -p "$CONFIG_DIR" "$WORKSPACE_DIR"
-# The container runs as uid 1000 (node). In rootless Podman the host UID is
-# mapped, so ensure the directories are writable inside the container.
-chmod 777 "$CONFIG_DIR" "$WORKSPACE_DIR"
+# The container runs as uid 1000 (node), mapped to a sub-UID in rootless Podman.
+# Use 700 to restrict access; podman maps ownership automatically.
+CONTAINER_UID=$(podman run --rm ghcr.io/openclaw/openclaw:latest id -u 2>/dev/null || echo "")
+if [[ -n "$CONTAINER_UID" ]]; then
+  podman unshare chown "$CONTAINER_UID:$CONTAINER_UID" "$CONFIG_DIR" "$WORKSPACE_DIR"
+fi
+chmod 700 "$CONFIG_DIR" "$WORKSPACE_DIR"
 
 # Seed a minimal config so the gateway starts without the interactive wizard
 OPENCLAW_JSON="$CONFIG_DIR/openclaw.json"
@@ -76,7 +80,7 @@ echo " OpenClaw is running!"
 echo "=============================================="
 echo ""
 echo " Gateway:   http://localhost:${OPENCLAW_GATEWAY_PORT:-18789}"
-echo " Token:     ${TOKEN}"
+echo " Token:     ${TOKEN:0:8}…(see .env for full token)"
 echo " Config:    ${CONFIG_DIR}"
 echo " Workspace: ${WORKSPACE_DIR}"
 echo ""
