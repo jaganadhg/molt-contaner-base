@@ -273,6 +273,7 @@ class APIHandler(BaseHTTPRequestHandler):
         client_queue = queue.Queue(maxsize=100)
         with sse_lock:
             sse_clients.append(client_queue)
+            sys.stderr.write(f"[AIPM] SSE client connected (clients={len(sse_clients)})\n")
 
         try:
             # Send initial state
@@ -299,6 +300,7 @@ class APIHandler(BaseHTTPRequestHandler):
             with sse_lock:
                 if client_queue in sse_clients:
                     sse_clients.remove(client_queue)
+            sys.stderr.write(f"[AIPM] SSE client disconnected (clients={len(sse_clients)})\n")
 
     def _broadcast_update(self, mgr: dict):
         """Broadcast updates to all SSE clients."""

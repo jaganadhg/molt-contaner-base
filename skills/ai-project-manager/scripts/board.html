@@ -541,6 +541,7 @@
 
         let draggedCard = null;
         let eventSource = null;
+        let sseFallbackInterval = null; // used when EventSource fails; polls /api as a fallback
 
         // ── API Helpers ────────────────────────────────────
         async function apiGet(path) {
@@ -758,21 +759,72 @@
         }
 
         // ── SSE (Server-Sent Events) ──────────────────────
+        function startPollingFallback() {
+            if (sseFallbackInterval) return;
+            // poll every 4s as a robust fallback when SSE isn't available
+            sseFallbackInterval = setInterval(refreshBoard, 4000);
+            const statusDot = document.getElementById('connection-status');
+            const statusLabel = document.getElementById('connection-label');
+            statusDot.className = 'connection-dot disconnected';
+            statusLabel.textContent = 'Polling (offline)';
+            console.warn('SSE unavailable — started polling fallback');
+        }
+
+        function stopPollingFallback() {
+            if (!sseFallbackInterval) return;
+            clearInterval(sseFallbackInterval);
+            sseFallbackInterval = null;
+            const statusDot = document.getElementById('connection-status');
+            const statusLabel = document.getElementById('connection-label');
+            statusDot.className = 'connection-dot connected';
+            statusLabel.textContent = 'Live';
+            console.info('Stopped polling fallback — SSE is active');
+        }
+
         function connectSSE() {
             const statusDot = document.getElementById('connection-status');
             const statusLabel = document.getElementById('connection-label');
 
-            eventSource = new EventSource(API_BASE + '/events');
+            // ensure any previous EventSource is closed
+            if (eventSource) {
+                try { eventSource.close(); } catch (err) { /* ignore */ }
+                eventSource = null;
+            }
+
+            // graceful fallback for browsers/environments where EventSource fails
+            if (!window.EventSource) {
+                startPollingFallback();
+                return;
+            }
+
+            try {
+                eventSource = new EventSource(API_BASE + '/events');
+            } catch (err) {
+                console.error('Failed to create EventSource:', err);
+                startPollingFallback();
+                return;
+            }
+
+            // if SSE doesn't open quickly, enable polling fallback
+            let opened = false;
+            const connectTimer = setTimeout(() => {
+                if (!opened) startPollingFallback();
+            }, 3000);
 
             eventSource.onopen = () => {
+                opened = true;
+                clearTimeout(connectTimer);
+                stopPollingFallback();
                 statusDot.className = 'connection-dot connected';
                 statusLabel.textContent = 'Live';
             };
 
-            eventSource.onerror = () => {
+            eventSource.onerror = (err) => {
+                console.warn('SSE error:', err);
                 statusDot.className = 'connection-dot disconnected';
                 statusLabel.textContent = 'Reconnecting...';
-                // Auto-reconnect is built into EventSource
+                // start polling fallback while reconnect attempts continue
+                startPollingFallback();
             };
 
             eventSource.addEventListener('board_update', (e) => {
