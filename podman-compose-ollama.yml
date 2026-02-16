@@ -74,3 +74,16 @@ services:
     entrypoint: ["node", "dist/index.js"]
     profiles:
       - cli
+
+  # ── QMD MCP HTTP (optional standalone) ───────────────────────────────────
+  qmd:
+    image: tobi/qmd:latest
+    container_name: qmd
+    command: ["mcp","--http","--port","8181","--daemon"]
+    environment:
+      HOME: /home/qmd
+    volumes:
+      - ${OPENCLAW_WORKSPACE_DIR}:/workspace:ro
+    ports:
+      - "127.0.0.1:8181:8181"
+    restart: unless-stopped
