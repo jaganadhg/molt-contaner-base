@@ -63,8 +63,16 @@ This creates the project database, initializes the Kanban board, and registers d
 
 ### Step 2: Launch the Kanban Board UI
 
+**IMPORTANT:** The server is a long-running process. You MUST run it in the background using `nohup` and `&`:
+
 ```bash
-python3 skills/ai-project-manager/scripts/server.py --port 8420
+nohup python3 skills/ai-project-manager/scripts/server.py --port 8420 > /tmp/aipm-server.log 2>&1 &
+echo "Kanban board started on http://localhost:8420 (PID: $!)"
+```
+
+To stop the server later:
+```bash
+kill $(cat /tmp/aipm-server.pid 2>/dev/null) 2>/dev/null; pkill -f "server.py --port 8420"
 ```
 
 Open `http://localhost:8420` to view the real-time Kanban board.

@@ -38,6 +38,8 @@ services:
       # Host-side: bind to loopback only (this is where network security is enforced)
       - "127.0.0.1:${OPENCLAW_GATEWAY_PORT}:18789"
       - "127.0.0.1:${OPENCLAW_BRIDGE_PORT}:18790"
+      # AI Project Manager Kanban board UI
+      - "127.0.0.1:8420:8420"
     init: true
     restart: unless-stopped
     command:

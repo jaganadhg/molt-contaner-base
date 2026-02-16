@@ -8,8 +8,9 @@ FROM ghcr.io/openclaw/openclaw:latest
 USER root
 
 # Install deps needed by Bun installer and node-llama-cpp native modules
+# include sqlite3 so we can inspect the project_manager.db from inside the container
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl unzip ca-certificates && \
+    apt-get install -y --no-install-recommends curl unzip ca-certificates sqlite3 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Bun for the node user (pinned version for reproducibility)
