@@ -346,15 +346,19 @@ def run_server(port: int = 8420, host: str = "0.0.0.0"):
         am = AgentManager(db, project.id)
         default_team = ["planner", "coder", "tester", "reviewer", "security"]
         spawned = []
+        # Ensure at least one session row exists for each role (create if missing)
         for role in default_team:
-            if not db.find_active_session_for_role(project.id, role):
+            existing = db.list_sessions(project.id, role=role)
+            if not existing:
                 try:
                     s = am.spawn_agent(role=role)
-                    spawned.append(s.id)
+                    spawned.append((role, s.id))
                 except Exception as e:
                     sys.stderr.write(f"[AIPM] Failed to spawn default role '{role}': {e}\n")
+            else:
+                sys.stderr.write(f"[AIPM] Existing session(s) found for role '{role}': {len(existing)}\n")
         if spawned:
-            print(f"✅ Auto-spawned default team sessions: {', '.join(spawned)}")
+            print("✅ Auto-spawned default team sessions: " + ", ".join(f"{r}:{sid}" for r,sid in spawned))
     except Exception as e:
         sys.stderr.write(f"[AIPM] Auto-spawn skipped/error: {e}\n")
 
