@@ -1,4 +1,4 @@
-import asyncio, json, uuid
+import asyncio, json, uuid, sys
 
 async def run():
     import websockets
@@ -38,14 +38,23 @@ async def run():
             d = json.loads(await ws.recv())
             if d.get('type') == 'res' and d.get('id') == connect_msg['id']:
                 break
-        # send explicit instruction to use topic-news-search
+        # allow passing a message or `/company-news <query>` on the command line
+        user_input = sys.argv[1] if len(sys.argv) > 1 else None
+        if user_input and user_input.strip().startswith('/company-news'):
+            # /company-news <QUERY> -> instruct agent to run the skill with QUERY
+            parts = user_input.strip().split(' ', 1)
+            query = parts[1].strip() if len(parts) > 1 else ""
+            message_text = f"Please run the skill `topic-news-search` — execute `node skills/topic-news-search/scripts/fetch_news.js \"{query}\"` and return the results in the SKILL.md output format. If no results, reply that no recent news was found."
+        else:
+            message_text = user_input or "Please run the skill `topic-news-search` — execute `node skills/topic-news-search/scripts/fetch_news.js \"Tesla\"` and return the results in the SKILL.md output format. If no results, reply that no recent news was found."
+
         chat_msg = {
             "type": "req",
             "method": "chat.send",
             "id": str(uuid.uuid4()),
             "params": {
                 "sessionKey": f"main:{uuid.uuid4()}",
-                "message": "Please run the skill `topic-news-search` — execute `node skills/topic-news-search/scripts/fetch_news.js \"Tesla\"` and return the results in the SKILL.md output format. If no results, reply that no recent news was found.",
+                "message": message_text,
                 "idempotencyKey": str(uuid.uuid4())
             }
         }

@@ -7,6 +7,7 @@ metadata:
       {
         "emoji": "📰",
         "requires": { "bins": ["node", "python3"] },
+        "commands": ["/company-news"]
       },
   }
 ---
@@ -26,6 +27,12 @@ Run the bundled Python script to fetch news, then analyze and present the result
 node skills/topic-news-search/scripts/fetch_news.js "QUERY"
 # Python fallback (still supported)
 python3 skills/topic-news-search/scripts/fetch_news.py "QUERY"
+```
+
+You can also invoke this skill with the slash shortcut in the simulator: `/company-news <QUERY>`, or run the CLI wrapper directly:
+
+```bash
+python3 skills/topic-news-search/scripts/company-news "Microsoft"
 ```
 
 Replace `QUERY` with the topic or company name (e.g., `"Tesla"`, `"Apple product launch"`, `"Goldman Sachs"`).

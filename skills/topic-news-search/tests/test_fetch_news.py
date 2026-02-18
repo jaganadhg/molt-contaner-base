@@ -29,6 +29,19 @@ def test_fetch_news_returns_results():
     assert len(data["results"]) > 0, "Expected at least one news result for 'Tesla'"
 
 
+def test_company_news_wrapper_invokes_fetcher():
+    # call the new CLI wrapper (falls back to JS or Python implementation)
+    out = subprocess.check_output([
+        "python3",
+        "skills/topic-news-search/scripts/company-news",
+        "Tesla",
+    ], text=True)
+    data = json.loads(out)
+
+    assert "query" in data and data["query"] == "Tesla"
+    assert "results" in data and isinstance(data["results"], list)
+    assert len(data["results"]) > 0, "Expected wrapper to return at least one result"
+
 if __name__ == '__main__':
     # Allow running this test without pytest (avoids pytest being a blocker locally)
     try:
