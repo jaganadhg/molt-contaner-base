@@ -26,17 +26,29 @@ ENV PATH="/home/node/.bun/bin:${PATH}"
 # Using the npm package ensures the compiled 'dist/qmd.js' is installed and callable.
 RUN bun install -g @tobilu/qmd@1.0.6 || bun install -g github:tobi/qmd#${QMD_COMMIT} || true
 
-# Ensure native better-sqlite3 binary is rebuilt and available where Node expects it
-# (some installers place the compiled .node in build/Release while `bindings` looks under lib/binding/<node-abi>).
-RUN if [ -d "/home/node/.bun/install/global/node_modules/better-sqlite3" ]; then \
-      cd /home/node/.bun/install/global/node_modules/better-sqlite3 && \
-      npm rebuild --build-from-source || true && \
-      ABI="node-v$(node -p \"process.versions.modules\")-linux-x64" && \
-      mkdir -p lib/binding/$ABI && \
-      if [ -f build/Release/better_sqlite3.node ]; then \
-        cp build/Release/better_sqlite3.node lib/binding/$ABI/better_sqlite3.node || true; \
-      fi; \
+# Vendor `better-sqlite3` into the app when possible so the gateway can require() it reliably
+# Prefer the repo's package manager (pnpm) if available, fall back to npm.
+RUN if [ -d "/app" ] && command -v pnpm >/dev/null 2>&1; then \
+      cd /app && pnpm add better-sqlite3 --save-prod --no-frozen-lockfile || true; \
+    elif [ -d "/app" ]; then \
+      cd /app && npm install --no-audit --no-fund better-sqlite3 || true; \
     fi || true
+
+# Ensure native better-sqlite3 binary is rebuilt and available where Node expects it
+# - Rebuild in both Bun global install and the app's node_modules (vendor compiled .node into the app)
+# - Some installers place compiled .node in build/Release while `bindings` looks under lib/binding/<node-abi>.
+RUN set -eux; \
+    ABI="node-v$(node -p 'process.versions.modules')-linux-x64"; \
+    for DIR in /home/node/.bun/install/global/node_modules/better-sqlite3 /app/node_modules/better-sqlite3; do \
+      if [ -d "$DIR" ]; then \
+        cd "$DIR"; \
+        npm rebuild --build-from-source || true; \
+        mkdir -p lib/binding/$ABI; \
+        if [ -f build/Release/better_sqlite3.node ]; then \
+          cp build/Release/better_sqlite3.node lib/binding/$ABI/better_sqlite3.node || true; \
+        fi; \
+      fi; \
+    done || true
 
 # Verify qmd is available
 RUN qmd --help > /dev/null 2>&1 || echo "WARNING: qmd --help failed (may still work at runtime)"

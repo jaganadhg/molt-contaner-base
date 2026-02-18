@@ -91,32 +91,24 @@ Capture decisions, context, things to remember.
 Skills provide your tools. Check SKILL.md for each skill.
 Keep local notes in TOOLS.md.
 
-## CRITICAL: News & Topic Queries
-When asked about news, updates, latest information, or any topic queries:
-1. ALWAYS use the bash/exec tool to run the topic-news-search skill
-2. Command: python3 skills/topic-news-search/scripts/fetch_news.py "QUERY"
-3. NEVER use web_search or web_fetch for news queries
-4. NEVER try to scrape individual websites for news
-5. The skill fetches from Google News RSS and works for ALL topics
+## CRITICAL: News & Topic Queries (MUST)
+When asked about news, updates, latest information, or any topic queries, the agent MUST run the `topic-news-search` skill using the bash/exec tool and present the results exactly in the SKILL.md output format.
 
-## Platform Formatting
-- Discord/WhatsApp: No markdown tables, use bullet lists
-- WhatsApp: No headers, use bold or CAPS for emphasis
+Required procedure (order matters):
+1. Invoke the skill via exec and pass the user's query verbatim:
 
-## Heartbeats
-When you receive a heartbeat poll, check HEARTBEAT.md if it exists.
-If nothing needs attention, reply HEARTBEAT_OK.
-AGENTSEOF
-chmod 644 "$WORKSPACE_DIR/AGENTS.md"
+   ```bash
+   python3 skills/topic-news-search/scripts/fetch_news.py "<QUERY>"
+   ```
 
-# ── Seed OpenClaw config ─────────────────────────────────────────────────────
-OPENCLAW_JSON="$CONFIG_DIR/openclaw.json"
-if [[ ! -f "$OPENCLAW_JSON" ]]; then
-  cat > "$OPENCLAW_JSON" <<'JSONEOF'
-{
-  "wizard": {
-    "lastRunAt": "2026-01-01T00:00:00.000Z",
-    "lastRunVersion": "2026.2.13",
+2. If the script returns articles, summarize and categorize each result per `SKILL.md`.
+3. If the script returns zero results, reply exactly: "No recent news found for '<QUERY>'. Would you like me to try a different query or timeframe?" and offer alternatives.
+
+Absolute prohibitions:
+- DO NOT use `web_search` or `web_fetch` for news queries.
+- DO NOT fabricate or infer news from memory — memory may be used for background context only.
+
+Rationale: this ensures reproducible, auditable news results and prevents hallucinated updates.
     "lastRunCommand": "doctor",
     "lastRunMode": "local"
   },

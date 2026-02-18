@@ -1,0 +1,55 @@
+Condensed — Natural‑Language Demo Prompts (paste into OpenClaw chat one at a time)
+
+Usage: Paste each short prompt below into the OpenClaw chat (or skill runner) one line at a time. No Python or container commands required.
+
+1) Initialize project: Create project "Data Product" — "Build a REST API for task management with authentication, CRUD, and real‑time notifications".
+
+2) Start Kanban: Start the Kanban board web server so I can view it in my browser (open http://localhost:8420).
+
+3) Backlog — add tasks: Add "Design API schema and endpoints" (architect, high); "Implement user authentication" (coder, high); "Build CRUD endpoints for tasks" (coder, medium); "Write integration tests" (tester, medium, depends on Implement user authentication & Build CRUD endpoints); "Security audit of auth module" (security, high, depends on Implement user authentication); "Set up CI/CD pipeline" (devops, low).
+
+4) Spawn architect & start work: Spawn architect and assign to task 1; move task 1 to in_progress.
+
+5) Architect → review: Move task 1 to review and message reviewer: "API schema design is complete — 12 endpoints defined; ready for review." 
+
+6) Reviewer approves & handoff: Move task 1 to done; spawn coder for task 2 and move task 2 to in_progress.
+
+7) Coder status update: Message planner from coder: "Starting JWT-based authentication with refresh tokens; ETA 2 hours."
+
+8) Coder asks security: Message security from coder: "@security please review token expiration: 15min access / 7-day refresh."
+
+9) Auth done → review: Move task 2 to review and message reviewer: "Auth module complete — JWT + refresh, bcrypt, rate limiting. Ready for review."
+
+10) Review approves: Move task 2 to done; spawn coder for task 3 and move task 3 to in_progress.
+
+11) Start security audit: Spawn security for task 5; move task 5 to in_progress; message coder: "Starting security audit on auth module — checking injection, CSRF, token handling."
+
+12) Run security scan: Trigger CI/CD security_scan stage for the project.
+
+13) Finish dev & prep testing: Move task 3 to review, then to done; spawn tester for task 4 and move task 4 to in_progress.
+
+14) Tester ↔ Coder messages: Tester → Coder: "Found edge case — empty string passwords pass validation." Then Coder → Tester: "Fixed: added min 8‑char validation."
+
+15) Run pipeline: Trigger build stage, then trigger test stage of the CI/CD pipeline.
+
+16) Security audit complete: Move task 5 to review, then to done; message planner: "Security audit complete — no critical findings; recommendations: CORS headers, webhook signing."
+
+17) Finish testing: Move task 4 to review, then to done.
+
+18) DevOps completes CI/CD: Spawn devops for task 6; move task 6 to in_progress → review → done.
+
+19) Full status: Show full project status.
+
+20) Audit trail: Show complete audit trail for the project.
+
+21) Pipeline status: Show CI/CD pipeline status.
+
+22) Export board: Export current board state as JSON.
+
+23) Terminate agents: List all active agents and terminate each with reason "Sprint complete".
+
+24) Final report: Generate project report with completed tasks, agent activity, and full audit timeline.
+
+Notes:
+- Paste prompts one at a time and watch the Kanban update in real time. 
+- These are compact equivalents of the longer demo sequence for rapid demos or live walkthroughs.

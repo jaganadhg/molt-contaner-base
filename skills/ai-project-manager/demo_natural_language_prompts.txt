@@ -1,0 +1,117 @@
+End-to-End Demo — Natural‑Language Prompts (paste into OpenClaw chat one at a time)
+
+Usage: Paste each prompt below into the OpenClaw chat (or skill runner) one at a time. The skill will perform the corresponding action — you do NOT need to run any Python commands.
+
+---
+
+Act 1: Project Setup
+
+Prompt 1 — Initialize the project
+Initialize a new AI Project Manager project called "Data Product" with description "Build a REST API for task management with authentication, CRUD operations, and real-time notifications"
+
+Prompt 2 — Launch the Kanban board
+Start the Kanban board web server so I can view it in my browser
+
+(Then open http://localhost:8420 to watch the board update in real-time as you continue)
+
+---
+
+Act 2: Sprint Planning — Create Tasks
+
+Prompt 3 — Create the backlog
+Create the following tasks on the board:
+- "Design API schema and endpoints" — assign to architect, priority high
+- "Implement user authentication" — assign to coder, priority high
+- "Build CRUD endpoints for tasks" — assign to coder, priority medium
+- "Write integration tests" — assign to tester, priority medium, depends on task 2 and task 3
+- "Security audit of auth module" — assign to security, priority high, depends on task 2
+- "Set up CI/CD pipeline" — assign to devops, priority low
+
+---
+
+Act 3: Spawn the Team
+
+Prompt 4 — Bring in the architect
+Spawn an architect agent and assign it to task 1 (Design API schema). Then move task 1 to in_progress.
+
+Prompt 5 — Architect finishes, hand off to coders
+The architect has finished the API design. Move task 1 to review. Then send a message from architect to reviewer saying "API schema design is complete — 12 endpoints defined for users, tasks, and notifications. Ready for review."
+
+Prompt 6 — Reviewer approves
+Move task 1 to done. Now spawn a coder agent for task 2 (user authentication) and move task 2 to in_progress.
+
+---
+
+Act 4: Development Flow
+
+Prompt 7 — Coder works on auth
+Send a message from coder to planner: "Starting implementation of JWT-based authentication with refresh tokens. Estimated 2 hours."
+
+Prompt 8 — Coder needs help
+Send a message from coder to security: "@security Can you review the token expiration strategy before I finalize? Using 15min access tokens + 7-day refresh tokens."
+
+Prompt 9 — Auth is done
+Move task 2 to review. Send a message from coder to reviewer: "Authentication module complete — JWT with refresh tokens, bcrypt password hashing, rate limiting on login endpoint. Ready for code review."
+
+Prompt 10 — Review and approve auth
+Move task 2 to done. Now spawn a coder agent for task 3 and move it to in_progress.
+
+---
+
+Act 5: Security & Testing
+
+Prompt 11 — Security audit begins
+Spawn a security agent for task 5 (security audit). Move task 5 to in_progress. Send a message from security to coder: "Starting security audit on auth module. Will check for injection, CSRF, and token handling vulnerabilities."
+
+Prompt 12 — Run the security scan pipeline
+Trigger the security_scan stage of the CI/CD pipeline
+
+Prompt 13 — Finish coding and testing prep
+Move task 3 to review, then to done. Now spawn a tester agent for task 4 and move task 4 to in_progress.
+
+Prompt 14 — Tester communicates
+Send a message from tester to coder: "Found an edge case — empty string passwords pass validation. Please fix." Then send a message from coder to tester: "Good catch, fixed. Added validation for minimum 8 characters."
+
+---
+
+Act 6: Pipeline & Wrap-up
+
+Prompt 15 — Run the full pipeline
+Trigger the build stage of the CI/CD pipeline, then trigger the test stage
+
+Prompt 16 — Security audit done
+Move task 5 to review, then to done. Send a message from security to planner: "Security audit complete. No critical vulnerabilities found. Recommendations: add CORS headers, implement request signing for webhooks."
+
+Prompt 17 — Tests pass, wrap up testing
+Move task 4 to review, then done.
+
+Prompt 18 — DevOps finishes CI/CD
+Spawn a devops agent for task 6, move task 6 to in_progress. Then move it to review, then done.
+
+---
+
+Act 7: Review Everything
+
+Prompt 19 — Full status check
+Show me the full project status
+
+Prompt 20 — Audit trail
+Show me the complete audit trail for the project
+
+Prompt 21 — Check the pipeline
+Show me the CI/CD pipeline status
+
+Prompt 22 — Export the board
+Export the current board state as JSON
+
+Prompt 23 — List all agents and terminate them
+List all active agents, then terminate each one with reason "Sprint complete"
+
+Prompt 24 — Final report
+Generate a project report showing all completed tasks, agent activity, and the full audit timeline
+
+---
+
+Notes:
+- Paste prompts one at a time into the OpenClaw chat; the skill will execute them using natural language.
+- No Python commands are required to run this demo.

@@ -47,6 +47,9 @@ PY
             sleep 5
           done
 
+      - name: Check better-sqlite3 available in gateway
+        run: docker exec openclaw-gateway node -e "try{require('better-sqlite3'); console.log('better-sqlite3: OK')}catch(e){console.error('better-sqlite3: FAIL', e.message); process.exit(1)}"
+
       - name: Run tests (unit + e2e)
         run: pytest -q
 
