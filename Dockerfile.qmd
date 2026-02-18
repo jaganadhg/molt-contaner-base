@@ -9,7 +9,8 @@ USER root
 
 # Install deps needed by Bun installer and node-llama-cpp native modules
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl unzip ca-certificates && \
+    apt-get install -y --no-install-recommends \
+      curl unzip ca-certificates build-essential python3 pkg-config libsqlite3-dev make g++ && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Bun for the node user (pinned version for reproducibility)
@@ -21,10 +22,21 @@ RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
 # Put bun (and globally installed bins like qmd) on PATH
 ENV PATH="/home/node/.bun/bin:${PATH}"
 
-# Install QMD globally via Bun (pinned to a specific commit for supply-chain safety)
-# Update this commit hash when upgrading QMD.
-ARG QMD_COMMIT=main
-RUN bun install -g github:tobi/qmd#${QMD_COMMIT}
+# Install QMD globally via Bun (use published npm package to ensure built 'dist' is present)
+# Using the npm package ensures the compiled 'dist/qmd.js' is installed and callable.
+RUN bun install -g @tobilu/qmd@1.0.6 || bun install -g github:tobi/qmd#${QMD_COMMIT} || true
+
+# Ensure native better-sqlite3 binary is rebuilt and available where Node expects it
+# (some installers place the compiled .node in build/Release while `bindings` looks under lib/binding/<node-abi>).
+RUN if [ -d "/home/node/.bun/install/global/node_modules/better-sqlite3" ]; then \
+      cd /home/node/.bun/install/global/node_modules/better-sqlite3 && \
+      npm rebuild --build-from-source || true && \
+      ABI="node-v$(node -p \"process.versions.modules\")-linux-x64" && \
+      mkdir -p lib/binding/$ABI && \
+      if [ -f build/Release/better_sqlite3.node ]; then \
+        cp build/Release/better_sqlite3.node lib/binding/$ABI/better_sqlite3.node || true; \
+      fi; \
+    fi || true
 
 # Verify qmd is available
 RUN qmd --help > /dev/null 2>&1 || echo "WARNING: qmd --help failed (may still work at runtime)"
