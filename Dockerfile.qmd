@@ -53,4 +53,9 @@ RUN set -eux; \
 # Verify qmd is available
 RUN qmd --help > /dev/null 2>&1 || echo "WARNING: qmd --help failed (may still work at runtime)"
 
+# Include Node `topic-news-search` skill in the image so the gateway can exec it from the built image.
+# This ensures `fetch_news.js` is available even when the workspace is not mounted.
+USER root
+COPY --chown=node:node skills/topic-news-search /home/node/.openclaw/workspace/skills/topic-news-search
+RUN mkdir -p /home/node/.openclaw/workspace/skills/topic-news-search && chown -R node:node /home/node/.openclaw/workspace/skills/topic-news-search || true
 USER node

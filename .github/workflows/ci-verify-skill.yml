@@ -1,0 +1,21 @@
+name: CI — verify image includes topic-news-search
+
+on:
+  push:
+    branches: [ main, feature/** ]
+  pull_request:
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image (Dockerfile.qmd)
+        run: |
+          docker build -f Dockerfile.qmd -t openclaw-qmd:test .
+
+      - name: Verify `fetch_news.js` is present in image
+        run: |
+          docker run --rm openclaw-qmd:test test -f /home/node/.openclaw/workspace/skills/topic-news-search/scripts/fetch_news.js

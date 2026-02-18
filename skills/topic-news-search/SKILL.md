@@ -6,7 +6,7 @@ metadata:
     "openclaw":
       {
         "emoji": "📰",
-        "requires": { "bins": ["python3"] },
+        "requires": { "bins": ["node", "python3"] },
       },
   }
 ---
@@ -22,6 +22,9 @@ Run the bundled Python script to fetch news, then analyze and present the result
 ### Step 1: Fetch news
 
 ```bash
+# Node.js implementation (preferred)
+node skills/topic-news-search/scripts/fetch_news.js "QUERY"
+# Python fallback (still supported)
 python3 skills/topic-news-search/scripts/fetch_news.py "QUERY"
 ```
 
@@ -30,7 +33,9 @@ Replace `QUERY` with the topic or company name (e.g., `"Tesla"`, `"Apple product
 Use `--max N` to control the number of results (default: 8):
 
 ```bash
-python3 skills/topic-news-search/scripts/fetch_news.py --max 5 "Microsoft"
+node skills/topic-news-search/scripts/fetch_news.js --max 5 "Microsoft"
+# python fallback:
+# python3 skills/topic-news-search/scripts/fetch_news.py --max 5 "Microsoft"
 ```
 
 The script returns JSON with an array of news items containing `title`, `source`, `date`, `link`, and `snippet`.

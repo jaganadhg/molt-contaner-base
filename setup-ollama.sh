@@ -98,7 +98,10 @@ Required procedure (order matters):
 1. Invoke the skill via exec and pass the user's query verbatim:
 
    ```bash
-   python3 skills/topic-news-search/scripts/fetch_news.py "<QUERY>"
+   # Node.js implementation (preferred)
+   node skills/topic-news-search/scripts/fetch_news.js "<QUERY>"
+   # Python fallback (supported)
+   # python3 skills/topic-news-search/scripts/fetch_news.py "<QUERY>"
    ```
 
 2. If the script returns articles, summarize and categorize each result per `SKILL.md`.

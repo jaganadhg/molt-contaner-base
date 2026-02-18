@@ -45,7 +45,7 @@ async def run():
             "id": str(uuid.uuid4()),
             "params": {
                 "sessionKey": f"main:{uuid.uuid4()}",
-                "message": "Please run the skill `topic-news-search` — execute `python3 skills/topic-news-search/scripts/fetch_news.py \"Tesla\"` and return the results in the SKILL.md output format. If no results, reply that no recent news was found.",
+                "message": "Please run the skill `topic-news-search` — execute `node skills/topic-news-search/scripts/fetch_news.js \"Tesla\"` and return the results in the SKILL.md output format. If no results, reply that no recent news was found.",
                 "idempotencyKey": str(uuid.uuid4())
             }
         }
