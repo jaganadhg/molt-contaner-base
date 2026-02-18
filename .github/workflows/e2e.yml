@@ -1,0 +1,57 @@
+name: E2E — gateway + topic-news-search
+
+on:
+  push:
+    branches: [ main, 'feature/**' ]
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build OpenClaw QMD image
+        run: docker build -t openclaw-qmd:ci -f Dockerfile.qmd .
+
+      - name: Start gateway container
+        run: |
+          docker run -d --name openclaw-gateway -p 18789:18789 \
+            -e OPENCLAW_GATEWAY_TOKEN=ci-test-token \
+            -e OPENAI_API_KEY= \
+            openclaw-qmd:ci node dist/index.js gateway --bind lan --port 18789
+
+      - name: Install Python deps for tests
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install websockets pytest
+
+      - name: Wait for gateway WebSocket to accept connections
+        run: |
+          for i in $(seq 1 60); do
+            python3 - <<'PY'
+import asyncio, websockets, sys
+async def try_connect():
+    try:
+        async with websockets.connect('ws://127.0.0.1:18789/', timeout=3):
+            print('connected')
+            return True
+    except Exception:
+        return False
+if not asyncio.run(try_connect()):
+    sys.exit(1)
+PY
+            if [ $? -eq 0 ]; then echo gateway-ready && break; fi
+            sleep 5
+          done
+
+      - name: Run tests (unit + e2e)
+        run: pytest -q
+
+      - name: Stop gateway
+        if: always()
+        run: |
+          docker stop openclaw-gateway || true
+          docker rm openclaw-gateway || true
